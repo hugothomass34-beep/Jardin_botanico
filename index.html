@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explora la Biodiversidad del Jardín Botánico</title>
+    
+    <style>
+        /* INICIO DEL CSS BASE Y TÍTULO */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Estilo del TÍTULO CON FONDO Y SOMBRA */
+        h1.map-title {
+            color: white; 
+            background: linear-gradient(135deg, #008000, #38b000); /* Degradado verde */
+            padding: 10px 30px; 
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 2.2em;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); 
+            transition: transform 0.3s;
+        }
+        
+        h1.map-title:hover {
+            transform: scale(1.02);
+        }
+
+        /* Contenedor principal que define el área visible del mapa (Viewport) */
+        .map-viewport {
+            width:100%;
+            height:70vh;
+            overflow: hidden; 
+            position: relative;
+            border: 5px solid #008000; 
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        
+        /* Contenedor interno que es el MAPA y se moverá/escalará */
+        .map-container {
+            position: absolute; 
+            width: 100%;        
+            height: 100%;
+            cursor: grab;     
+            transform-origin: 0 0; 
+            transition: transform 0.2s ease-out; 
+        }
+        
+        .map-container.dragging {
+            cursor: grabbing;
+        }
+
+        .botanic-map {
+            display: block;
+            width: 100%; 
+            height: 100%;
+        }
+
+        /* --- BOTONES DE CONTROL DE ZOOM --- */
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .zoom-controls button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            margin-bottom: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            line-height: 1;
+        }
+
+        .zoom-controls button:hover {
+            background-color: #0056b3;
+        }
+
+        
+        .icon-point {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background-color: #ff6600;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            z-index: 10;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .icon-point:hover {
+            background-color: #cc5200;
+            transform: scale(1.3);
+        }
+
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999; 
+            display: none;
+        }
+        
+        .info-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 550px; 
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+            z-index: 10000; 
+            display: none;
+            overflow: hidden;
+            color: #333; 
+        }
+        
+        .info-header {
+            background: linear-gradient(135deg, #3a7250 0%, #2d5a3f 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .info-title {
+            font-size: 1.6rem; 
+            font-weight: 700;
+        }
+        
+        .close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+        
+        .info-content {
+            padding: 25px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .area-description {
+            color: #555;
+            font-size: 1rem;
+            line-height: 1.6;
+            text-align: justify;
+        }
+
+        
+        .area-description ul {
+            list-style: none; 
+            padding: 0;
+            margin: 0;
+        }
+
+        .area-description li {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e8f5e9;
+            border-radius: 8px;
+            background-color: #f9fdf9;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .area-description li strong {
+            display: block;
+            color: #3a7250; 
+            margin-bottom: 5px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            border-bottom: 2px solid #3a725022; 
+            padding-bottom: 5px;
+        }
+
+
+        /* --- POSICIONAMIENTO DE CADA PUNTO --- */
+        .point-a1 { top: 15%; left: 66%; }
+        .point-a2 { top: 13%; left: 79%; }
+        .point-a3 { top: 23%; left: 88%; }
+        /* A4 y A5 */
+        .point-a4 { top: 32%; left: 79%; }
+        .point-a5 { top: 46%; left: 82%; }
+        
+        /* A6 (ahora A5 ROTONDA) */
+        .point-a6 { top: 23%; left: 74%; } 
+        
+        /* A7 (ahora A5) */
+        .point-a7 { top: 38.5%; left: 68.5%; } 
+        
+        /* B1 (Area ROTONDA P) - Original */
+        .point-b1 { top: 34%; left: 54%; } 
+        
+        /* B2 (Area A7) */
+        .point-b2 { top: 19%; left: 38%; }
+
+        /* B3 (Area C) */
+        .point-b3 { top: 12.5%; left: 29%; } 
+        
+        /* B4 (P CAPTUS) */
+        .point-b4 { top: 25.5%; left: 22.9%; } 
+
+        /* C (B1) - */
+        .point-c { top: 12%; left: 15.5%; } 
+        
+        /* D (E) - */
+        .point-d { top: 26.5%; left: 15%; }
+        
+        /* E (B-J) - */
+        .point-e { top: 32.5%; left: 32%; }
+        
+        .point-f { top: 62.5%; left: 37.5%; }
+        .point-g { top: 45%; left: 42%; }
+        .point-h { top: 65%; left: 48%; }
+        .point-i { top: 75%; left: 53.5%; }
+        .point-j { top: 51%; left: 52%; }
+        .point-k { top: 50%; left: 60%; }
+        /* L */
+        .point-l { top: 32%; left: 40%; }
+        /* FIN DEL CSS */
+    </style>
+</head>
+<body>
+
+    <h1 class="map-title">¡Explora la Biodiversidad del Jardín Botánico!</h1>
+
+    <div class="map-viewport" id="map-viewport">
+        <div class="zoom-controls">
+            <button id="zoom-in">+</button>
+            <button id="zoom-out">-</button>
+        </div>
+
+        <div class="map-container" id="map-container">
+            <img src="https://i.ibb.co/hxSKrdRq/Gemini-Generated-Image-319u7y319u7y319u.png" alt="Mapa del Jardín Botánico" class="botanic-map">
+
+            
+            <div class="icon-point point-a1" 
+                data-area="A1" 
+                data-name="Area A1" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>ROBLE SERRANO (Quercus spp.)</strong>
+                                El roble serrano (Quercus spp.) es un árbol de hoja caduca que crece en zonas montañosas y templadas. Puede alcanzar alturas de entre 10 y 25 metros, con un tronco grueso y corteza agrietada de color gris oscuro. Sus hojas son grandes, duras y de bordes lobulados, que se tornan amarillentas o rojizas en otoño antes de caer.
+                            </li>
+                            <li>
+                                <strong>HULE CASTILLA ELASTICA (Castilla elastica)</strong>
+                                El hule o Castilla elástica es un árbol tropical originario de Mesoamérica, perteneciente a la familia Moraceae. Puede alcanzar entre 20 y 40 metros de altura y se caracteriza por su tronco grueso, corteza grisácea y hojas grandes, brillantes y ovaladas.
+                            </li>
+                            <li>
+                                <strong>COYOL REDONDO (Acrocomia aculeata)</strong>
+                                El Coyol redondo es una palmera originaria de América tropical y subtropical, ampliamente distribuida en México, Centroamérica, Sudamérica y algunas regiones del Caribe. Es conocida por su resistencia a condiciones adversas y su adaptabilidad a distintos tipos de suelo y clima.
+                            </li>
+                            <li>
+                                <strong>OREJA DE ELEFANTE (Xanthosoma mexicanum)</strong>
+                                La Oreja de Elefante (Xanthosoma mexicanum) es una planta tropical perenne originaria de México y otras regiones de América Central. Pertenece a la familia Araceae y es apreciada tanto por su valor ornamental como por sus usos alimenticios, ya que algunos de sus tubérculos son comestibles tras una cocción adecuada.
+                            </li>
+                            <li>
+                                <strong>CARAMBOLA (Averrhoa carambola)</strong>
+                                La carambola (Averrhoa carambola), también conocida como fruta estrella por su forma al cortarla, es una planta tropical originaria del sudeste asiático. Es un árbol pequeño o mediano, de hojas verdes brillantes y flores rosadas o lilas. Su fruto es amarillo dorado, jugoso y de sabor agridulce, muy apreciado tanto para consumo fresco como en jugos, ensaladas y postres.
+                            </li>
+                            <li>
+                                <strong>MORA (Maclura tinctoria)</strong>
+                                Maclura tinctoria es un árbol perenne de tamaño mediano a grande, que puede alcanzar entre 15 y 25 metros de altura. Su tronco es recto, cilíndrico y generalmente robusto, con corteza grisácea y fisurada. Es conocido principalmente por su madera dura y duradera y por los pigmentos naturales que se extraen de su madera y raíces, que se utilizan como tinte.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-a2" 
+                data-area="A2" 
+                data-name="Area A2" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>PALMA REAL CUBANA (Roystonea regia)</strong>
+                                La Palma Real Cubana (Roystonea regia) es una majestuosa palma originaria de Cuba y considerado símbolo nacional del país. Puede alcanzar hasta 25 metros de altura, con un tronco liso, recto y grisáceo, coronado por un penacho de grandes hojas verdes y brillantes que le dan un aspecto elegante.
+                            </li>
+                            <li>
+                                <strong>PATZAGUA</strong>
+                                La patzagwa es un árbol mediano o grande que puede alcanzar entre 10 y 25 metros de altura. Posee un tronco recto y ramas extendidas, que le dan una copa amplia y frondosa. Su corteza es grisácea o parda, a veces con grietas o escamas.
+                            </li>
+                            <li>
+                                <strong>MANGO (Mangifera indica)</strong>
+                                El mango (Mangifera indica) es un árbol frutal tropical originario del sur de Asia, ampliamente cultivado en regiones cálidas de todo el mundo. Puede alcanzar hasta 30 metros de altura y presenta un follaje denso de hojas alargadas y verdes.
+                            </li>
+                            <li>
+                                <strong>HIERBA SANTILLA (Piper marginatum)</strong>
+                                La Hierba Santilla (Piper marginatum) es una planta perenne y aromática, perteneciente a la familia Piperaceae. Es originaria de las regiones tropicales de América Central y del Sur, especialmente en zonas húmedas de países como México, Colombia, Venezuela, Brasil y Perú.
+                            </li>
+                            <li>
+                                <strong>COLA DE PESCADO (Caryota urens)</strong>
+                                La Caryota urens, conocida comúnmente como palma cola de pescado o fishtail palm, es una especie de palma perteneciente a la familia Arecaceae. Recibe su nombre por la forma característica de sus hojas, que se asemejan a la cola de un pez, con lóbulos triangulares e irregulares.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+
+            <div class="icon-point point-a3" 
+                data-area="A3" 
+                data-name="Area A3" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>HOJA BLANCA (Gymnanthemum amygdalinum)</strong>
+                                La hoja blanca (Gymnanthemum amygdalinum), también conocida como bitter leaf, es un arbusto perenne originario de África, aunque se cultiva en diversas regiones tropicales. Presenta hojas alargadas, verdes en el envés y con una tonalidad más clara o blanquecina en el haz, de sabor amargo característico.
+                            </li>
+                            <li>
+                                <strong>PALO DE AGUA (Critonia morifolia)</strong>
+                                El Palo de agua (Critonia morifolia) es un arbusto o árbol pequeño que puede alcanzar entre 2 y 6 metros de altura. Es una especie originaria de regiones tropicales de América, especialmente de México y Centroamérica, donde crece en bosques húmedos y semicálidos.
+                            </li>
+                            <li>
+                                <strong>CAFE (Coffea spp.)</strong>
+                                El café (Coffea arabica o Coffea canephora, según la variedad) es un arbusto perenne originario de África tropical, ampliamente cultivado en regiones cálidas y montañosas. Puede alcanzar entre 2 y 6 metros de altura y presenta hojas verdes, brillantes y elípticas.
+                            </li>
+                            <li>
+                                <strong>GUAYABILLO (Ginoria nudiflora)</strong>
+                                Ginoria nudiflora es un arbusto o árbol pequeño que puede alcanzar entre 2 y 6 metros de altura. Su copa es abierta y redondeada, con ramas delgadas y algo flexibles. Es una especie nativa de regiones tropicales y subtropicales de América, especialmente en México, Centroamérica y el Caribe.
+                            </li>
+                            <li>
+                                <strong>CACO NEGRO (Diospyros digyna)</strong>
+                                El caco negro (Diospyros digyna), también conocido como cacao o zapote negros, es un árbol tropical originario de Mesoamérica. Puede alcanzar entre 10 y 20 metros de altura, con hojas grandes, verdes y coriáceas. Produce frutos redondos u ovalados de piel rugosa y color oscuro, cuya pulpa es dulce y comestible.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-a4" 
+                data-area="A4" 
+                data-name="Area A4" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>MOJÚ (Brosimum alicastrum)</strong>
+                                El Brosimum alicastrum es un árbol tropical de gran tamaño, nativo de las selvas húmedas de América Central y el sur de México. Puede alcanzar una altura de hasta 40 metros y un diámetro de tronco de más de 1 metro.
+                            </li>
+                            <li>
+                                <strong>HOJA ELEGANTE (Dieffenbachia seguine)</strong>
+                                La Dieffenbachia seguine es una planta ornamental tropical perteneciente a la familia Araceae. Es originaria de las regiones húmedas de América Central y del Sur, especialmente de zonas selváticas de Brasil, Colombia y Costa Rica.
+                            </li>
+                            <li>
+                                <strong>CACAO (Theobroma cacao)</strong>
+                                El cacao (Theobroma cacao) es un árbol tropical originario de América Central y del Sur, cultivado principalmente por sus semillas, que se utilizan para producir chocolate. Puede alcanzar entre 4 y 8 metros de altura y presenta hojas grandes y verdes. Sus flores son pequeñas, de color rosado o blanco, y crecen directamente sobre el tronco y ramas.
+                            </li>
+                            <li>
+                                <strong>UJTUI (Tapirira mexicana)</strong>
+                                Tapirira mexicana es un árbol tropical de tamaño mediano a grande, que puede alcanzar entre 10 y 25 metros de altura. Su tronco es recto, con una corteza de color grisácea o marrón claro, que se desprende en delgadas láminas.
+                            </li>
+                            <li>
+                                <strong>ZAPOTE NEGRO (Diospyros digyna)</strong>
+                                El zapote negro (Diospyros digyna), también conocido como black sapote, es un árbol frutal originario de México y Centroamérica. Puede alcanzar entre 10 y 25 metros de altura y presenta hojas perennes, brillantes y de color verde oscuro.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-a5" 
+                data-area="A4" 
+                data-name="Area A4" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>MOJÚ (Brosimum alicastrum)</strong>
+                                El Brosimum alicastrum es un árbol tropical de gran tamaño, nativo de las selvas húmedas de América Central y el sur de México. Puede alcanzar una altura de hasta 40 metros y un diámetro de tronco de más de 1 metro.
+                            </li>
+                            <li>
+                                <strong>HOJA ELEGANTE (Dieffenbachia seguine)</strong>
+                                La Dieffenbachia seguine es una planta ornamental tropical perteneciente a la familia Araceae. Es originaria de las regiones húmedas de América Central y del Sur, especialmente de zonas selváticas de Brasil, Colombia y Costa Rica.
+                            </li>
+                            <li>
+                                <strong>CACAO (Theobroma cacao)</strong>
+                                El cacao (Theobroma cacao) es un árbol tropical originario de América Central y del Sur, cultivado principalmente por sus semillas, que se utilizan para producir chocolate. Puede alcanzar entre 4 y 8 metros de altura y presenta hojas grandes y verdes. Sus flores son pequeñas, de color rosado o blanco, y crecen directamente sobre el tronco y ramas.
+                            </li>
+                            <li>
+                                <strong>UJTUI (Tapirira mexicana)</strong>
+                                Tapirira mexicana es un árbol tropical de tamaño mediano a grande, que puede alcanzar entre 10 y 25 metros de altura. Su tronco es recto, con una corteza de color grisácea o marrón claro, que se desprende en delgadas láminas.
+                            </li>
+                            <li>
+                                <strong>ZAPOTE NEGRO (Diospyros digyna)</strong>
+                                El zapote negro (Diospyros digyna), también conocido como black sapote, es un árbol frutal originario de México y Centroamérica. Puede alcanzar entre 10 y 25 metros de altura y presenta hojas perennes, brillantes y de color verde oscuro.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+
+            <div class="icon-point point-a6" 
+                data-area="A5 ROTONDA" 
+                data-name="Area A5 ROTONDA" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>CHUMÍ (Chrysophyllum mexicanum)</strong>
+                                Árbol mediano de hojas verdes brillantes en el haz y doradas en el envés. Produce frutos comestibles de pulpa dulce, parecidos a pequeñas ciruelas. Es originario de regiones tropicales y se encuentra comúnmente en selvas húmedas. Su madera es dura y se utiliza en carpintería y construcción. También tiene valor ecológico como refugio para aves y fauna silvestre.
+                            </li>
+                            <li>
+                                <strong>CRUCECITA (Pisonia aculeata)</strong>
+                                Arbusto o pequeño árbol espinoso de ramas flexibles y hojas simples. Sus frutos pegajosos se adhieren fácilmente al pelaje de los animales, ayudando a su dispersión. Crece en zonas costeras y bosques secos tropicales. Se usa como planta ornamental y para formar cercas naturales. Además, brinda refugio a aves e insectos polinizadores.
+                            </li>
+                            <li>
+                                <strong>NAMBIMBO (Ehretia tinifolia)</strong>
+                                Árbol o arbusto que alcanza hasta 10 metros de altura, con hojas ovaladas y flores blancas o amarillentas muy fragantes. Sus frutos pequeños son comestibles y atraen aves. Se adapta bien a climas cálidos y secos. Se utiliza en medicina tradicional por sus propiedades digestivas y antiinflamatorias. También es apreciado como planta ornamental.
+                            </li>
+                            <li>
+                                <strong>MATAPALO (Ficus obtusifolia)</strong>
+                                Higuera tropical que inicia su crecimiento sobre otros árboles, envolviéndolos con sus raíces aéreas hasta cubrirlos por completo. Puede alcanzar grandes dimensiones y desarrolla una copa densa. Sus frutos sirven de alimento a muchas especies de aves y mamíferos. Es fundamental para la regeneración de ecosistemas tropicales. También se usa como sombra y ornamento en áreas rurales.
+                            </li>
+                            <li>
+                                <strong>RAMÓN COLORADO (Trophis racemosa)</strong>
+                                Árbol de gran tamaño, con copa frondosa y madera resistente. Produce frutos pequeños de color rojizo que son alimento de aves y mamíferos. Se encuentra en selvas tropicales y bosques húmedos de México y Centroamérica. Su madera se utiliza en construcción y ebanistería por su alta resistencia.
+                            </li>
+                            <li>
+                                <strong>HIERBA SANTILLA (Piper marginatum)</strong>
+                                Planta herbácea aromática de hojas grandes y brillantes, con aroma similar al anís. Se emplea en la medicina tradicional para tratar dolores estomacales y respiratorios. Sus extractos poseen propiedades antimicrobianas y antiinflamatorias. Crece en zonas húmedas y sombreadas de los trópicos. También se utiliza como planta ornamental por su follaje atractivo.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-a7" 
+                data-area="A5" 
+                data-name="Area A5" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>ANTURIO (Anthurium pedatoradiatum)</strong>
+                                Planta tropical de hojas grandes y profundamente divididas, que asemejan una mano abierta. Es originaria del sur de México y se cultiva como planta ornamental por su follaje exótico. Prefiere ambientes húmedos y con sombra parcial. Se adapta bien a interiores con buena ventilación. Es muy apreciada en jardines tropicales y colecciones botánicas.
+                            </li>
+                            <li>
+                                <strong>HOJA DE CORAZÓN (Monstera tuberculata)</strong>
+                                Planta trepadora de hojas en forma de corazón, características por sus perforaciones naturales. Es una especie epífita que crece sobre árboles en selvas húmedas. Sus raíces aéreas le permiten captar humedad y nutrientes del ambiente. Se usa ampliamente como planta decorativa por su aspecto exuberante. Requiere sombra ligera y riego constante sin encharcar.
+                            </li>
+                            <li>
+                                <strong>CABEZA DE NEGRO (Dioscorea bartlettii)</strong>
+                                Planta trepadora con un gran tubérculo subterráneo del que nacen largos tallos y hojas acorazonadas. Es originaria del sureste de México y Centroamérica. El tubérculo se asemeja a una piedra o cabeza, de ahí su nombre común. Se utiliza con fines medicinales y en la alimentación tradicional tras su correcta preparación. Crece en zonas tropicales y bosques húmedos.
+                            </li>
+                            <li>
+                                <strong>CAMEDOR DESPEINADO (Chamaedorea glaucifolia)</strong>
+                                Pequeña palma nativa de Mesoamérica, muy usada en interiores y jardines sombreados. Tiene hojas largas, delgadas y arqueadas de color verde azulado. Crece en grupos densos y puede alcanzar hasta 2 metros de altura. Es resistente y fácil de mantener, ideal para purificar el aire. Prefiere ambientes cálidos y húmedos.
+                            </li>
+                            <li>
+                                <strong>TEMPISQUE (Sideroxylon capiri)</strong>
+                                Árbol grande de madera muy dura y duradera, característico de las selvas tropicales. Puede alcanzar entre 20 y 30 metros de altura. Sus frutos son comestibles y atraen a muchas especies de fauna. Es importante en la reforestación y conservación del suelo. Su madera se emplea en construcción y ebanistería por su alta resistencia.
+                            </li>
+                            <li>
+                                <strong>CARTUCHO (Anthurium montanum)</strong>
+                                Planta herbácea tropical con brácteas blancas o verdosas que rodean un espádice central. Crece en zonas húmedas y sombreadas de bosques tropicales. Su forma elegante la hace muy usada como flor ornamental. Prefiere suelos ricos en materia orgánica y humedad constante. Es símbolo de pureza y serenidad en arreglos florales.
+                            </li>
+                            <li>
+                                <strong>ANTURIO (Anthurium lucens)</strong>
+                                Especie epífita con hojas largas, coriáceas y brillantes de tono verde intenso. Originaria de selvas húmedas del sur de México y Centroamérica. Se cultiva por su atractivo follaje más que por sus flores. Requiere ambientes cálidos, buena humedad y sombra parcial. Es muy valorada por coleccionistas de plantas tropicales.
+                            </li>
+                            <li>
+                                <strong>HORMIGUILLO (Platymiscium dimorphandrum)</strong>
+                                Árbol de madera fina y duradera, muy apreciado en carpintería y ebanistería. Puede alcanzar hasta 25 metros de altura. Sus flores amarillas atraen abejas y polinizadores. Se usa también en programas de reforestación por su rápido crecimiento. Es nativo de regiones tropicales y subtropicales de América.
+                            </li>
+                            <li>
+                                <strong>ORQUÍDEA AFRICANA (Oeceoclades maculata)</strong>
+                                Orquídea terrestre originaria de África, hoy naturalizada en América tropical. Se distingue por sus hojas verdes con manchas oscuras y sus flores pequeñas de tonos púrpura o blanquecinos. Es muy resistente y crece incluso en suelos pobres. Florece varias veces al año en ambientes cálidos y húmedos. Es ideal para coleccionistas de orquídeas exóticas.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-b1" 
+                data-area="Rotonda P" 
+                data-name="Area ROTONDA P" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>TELÉFONO (Philodendron oxycardium)</strong>
+                                Planta trepadora de hojas verdes brillantes con forma de corazón, muy popular como planta de interior. Es resistente, fácil de cuidar y ayuda a purificar el aire. Se adapta bien a ambientes con poca luz y requiere riego moderado. Puede crecer como colgante o trepadora si se le da soporte. Es ideal para decorar hogares y oficinas tropicales.
+                            </li>
+                            <li>
+                                <strong>ARRAYÁN BLANCO (Eugenia uliginosa)</strong>
+                                Árbol mediano de copa densa y corteza clara, originario de zonas tropicales. Sus hojas son brillantes y aromáticas, y produce frutos comestibles de sabor dulce. Su madera es dura y resistente, utilizada en carpintería. Es una especie ornamental muy valorada por su follaje y flores pequeñas. Además, contribuye a la conservación de la fauna local.
+                            </li>
+                            <li>
+                                <strong>PALMA DE VIAJERO (Ravenala madagascariensis)</strong>
+                                Planta majestuosa originaria de Madagascar, conocida por sus hojas grandes dispuestas en forma de abanico. Puede alcanzar más de 10 metros de altura. Almacena agua en la base de las hojas, lo que le da su nombre común. Se usa ampliamente como planta ornamental en jardines tropicales. Prefiere pleno sol, humedad y suelos fértiles.
+                            </li>
+                            <li>
+                                <strong>PARAGÜITA (Zuelania guidonia)</strong>
+                                Árbol o arbusto de rápido crecimiento, de hojas simples y corteza grisácea. Es común en regiones tropicales de América y se adapta a diferentes tipos de suelos. Su madera es liviana y se utiliza localmente en construcciones rurales. También se siembra para dar sombra y en reforestaciones. Produce frutos pequeños que sirven de alimento a la fauna silvestre.
+                            </li>
+                            <li>
+                                <strong>ZAPATILLA (Anthurium seleri)</strong>
+                                Planta tropical de hojas alargadas y brillantes, con flores en forma de espádice rodeadas por una bráctea llamativa. Es originaria del sur de México y crece en selvas húmedas. Se cultiva como planta ornamental por su elegancia y colorido. Requiere ambientes cálidos y húmedos con luz filtrada. Su mantenimiento es sencillo en interiores o viveros tropicales.
+                            </li>
+                            <li>
+                                <strong>FLAMENCO (Anthurium sarukhanianum)</strong>
+                                Planta endémica de México, muy apreciada por su bráctea de tonos rojizos o rosados y su espádice amarillo. Crece en bosques húmedos y sombreados. Se utiliza como planta ornamental tanto en interiores como en jardines tropicales. Necesita humedad constante y buena ventilación. Es una especie de interés botánico y ornamental por su rareza.
+                            </li>
+                            <li>
+                                <strong>PACAYA (Chamaedorea tepejilote)</strong>
+                                Palma nativa de Mesoamérica, conocida por sus inflorescencias comestibles, llamadas también pacayas. Se consume cocida o en guisos tradicionales. Puede alcanzar hasta 6 metros de altura y crece en zonas húmedas y sombreadas. Además, es una planta ornamental ideal para interiores. Contribuye al equilibrio ecológico al servir de refugio para fauna pequeña.
+                            </li>
+                            <li>
+                                <strong>SABINO (Taxodium huegelii)</strong>
+                                Árbol monumental de gran longevidad, también conocido como ahuehuete. Puede superar los 40 metros de altura y vive cerca de ríos o manantiales. Su madera es resistente al agua y su follaje se vuelve dorado en invierno. Es símbolo nacional de México y considerado sagrado en muchas culturas. Además, contribuye a la conservación de los ecosistemas ribereños.
+                            </li>
+                            <li>
+                                <strong>RAMÓN COLORADO (Trophis racemosa)</strong>
+                                Árbol de copa frondosa y madera dura, común en selvas tropicales y bosques húmedos. Sus frutos rojos son alimento para aves y mamíferos. Su madera se emplea en carpintería y construcción. Es una especie útil en reforestación y conservación de suelos. También proporciona sombra y valor ecológico en zonas rurales.
+                            </li>
+                            <li>
+                                <strong>HIERBA SANTILLA (Piper marginatum)</strong>
+                                Planta herbácea aromática de hojas grandes y brillantes, con aroma anisado. Se usa en medicina tradicional para aliviar dolencias estomacales y respiratorias. Sus extractos tienen propiedades antimicrobianas y antiinflamatorias. Crece en zonas húmedas y sombreadas de los trópicos. También es apreciada como planta ornamental.
+                            </li>
+                            <li>
+                                <strong>PALMILLA (Zamia herrerae)</strong>
+                                Planta cícada de aspecto similar a una pequeña palma, con hojas pinnadas de color verde intenso. Es una especie endémica de México, adaptada a suelos tropicales y semisecos. Crece lentamente y se utiliza como planta ornamental por su elegancia. Pertenece a un grupo de plantas muy antiguas evolutivamente. Requiere semisombra y riego moderado.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+
+            <div class="icon-point point-b2" 
+                data-area="A7" 
+                data-name="Area A7" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>HORMIGUILLO (Platymiscium dimorphandrum)</strong>
+                                Árbol tropical de madera fina, dura y duradera, muy valorado en ebanistería y carpintería. Puede alcanzar hasta 25 metros de altura y presenta un follaje denso de hojas compuestas. Sus flores amarillas atraen abejas y otros polinizadores. Se emplea también en proyectos de reforestación. Es una especie nativa de América Central y del sur de México.
+                            </li>
+                            <li>
+                                <strong>PALMILLA (Zamia herrerae)</strong>
+                                Planta cícada con hojas pinnadas y brillantes, parecidas a las de una palma pequeña. Es endémica del sureste de México y crece lentamente en zonas tropicales y semisecas. Su aspecto ornamental la hace popular en jardines botánicos. Pertenece a un grupo vegetal muy antiguo en la evolución. Requiere sombra parcial y suelos bien drenados.
+                            </li>
+                            <li>
+                                <strong>COLA DE PESCADO (Chamaedorea ernesti-augusti)</strong>
+                                Palma ornamental de tamaño pequeño a mediano, con hojas partidas en forma de cola de pez. Es originaria de selvas húmedas de México y Centroamérica. Prefiere ambientes sombreados y húmedos, por lo que es ideal para interiores. Puede alcanzar hasta 3 metros de altura. Es muy usada para decoración tropical y purificación del aire.
+                            </li>
+                            <li>
+                                <strong>PALMA ANCHA (Chamaedorea oblongata)</strong>
+                                Palma elegante de hojas anchas, verdes y brillantes, común en los bosques tropicales de Mesoamérica. Es una planta de sombra que crece bien en interiores o jardines húmedos. Su tamaño compacto la hace ideal como ornamental. Necesita suelos ricos en materia orgánica y riego frecuente. Es resistente y fácil de mantener.
+                            </li>
+                            <li>
+                                <strong>TZATCUI (Dalbergia granadillo)</strong>
+                                Árbol de madera preciosa, también conocido como granadillo o tzatzcuy. Alcanza hasta 20 metros de altura y su madera es muy dura, pesada y de color rojizo. Se usa en muebles finos, instrumentos musicales y tallado. Es una especie nativa de México y Centroamérica. Su aprovechamiento requiere manejo sostenible debido a su alto valor comercial.
+                            </li>
+                            <li>
+                                <strong>CEDRO (Cedrela odorata)</strong>
+                                Árbol tropical de gran valor económico por su madera aromática, liviana y resistente. Puede alcanzar más de 30 metros de altura. Es usado en carpintería, ebanistería y fabricación de guitarras. Posee hojas compuestas y flores pequeñas amarillentas. Se distribuye ampliamente en América Latina y es ideal para reforestación y producción forestal.
+                            </li>
+                            <li>
+                                <strong>ROMPE ZAPATO (Sideroxylon celastrinum)</strong>
+                                Árbol o arbusto de madera muy dura, de ahí su nombre común. Crece en zonas secas o semisecas del trópico. Sus hojas son simples y brillantes, y produce pequeños frutos oscuros. Se utiliza en medicina tradicional por sus propiedades digestivas y antiinflamatorias. También sirve como sombra y refugio para fauna silvestre.
+                            </li>
+                            <li>
+                                <strong>MORA (Maclura tinctoria)</strong>
+                                Árbol de tamaño mediano que produce una madera amarillenta usada para obtener tintes naturales. Sus hojas son simples y sus frutos sirven de alimento a aves. Es originario de América tropical y subtropical. Su madera es muy resistente y apreciada en carpintería. Además, tiene usos medicinales y ecológicos en la restauración de suelos.
+                            </li>
+                            <li>
+                                <strong>LOMBRICILLO (Handroanthus chrysanthus)</strong>
+                                Árbol de floración espectacular con flores amarillas brillantes que aparecen antes de las hojas. Es conocido también como "guayacán amarillo". Alcanza entre 15 y 25 metros de altura y se adapta bien a climas tropicales y secos. Su madera es extremadamente dura y duradera. Se utiliza tanto en construcción como en jardinería ornamental por su belleza.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+
+            <div class="icon-point point-b3" 
+                data-area="C" 
+                data-name="Area C" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>ANTURIO (Anthurium schlechtendalii)</strong>
+                                Planta tropical de hojas grandes, brillantes y acorazonadas, conocida también como "cola de pato". Es originaria del sur de México y Centroamérica, donde crece en selvas húmedas. Se cultiva como planta ornamental por su atractivo follaje. Prefiere ambientes cálidos, sombra parcial y humedad constante. También ayuda a purificar el aire en interiores.
+                            </li>
+                            <li>
+                                <strong>IZOTE (Yucca gigantea)</strong>
+                                Planta suculenta de hojas largas y puntiagudas, considerada símbolo nacional de El Salvador. Puede alcanzar hasta 10 metros de altura. Produce racimos de flores blancas comestibles, muy usadas en la gastronomía tradicional. Tolera sequías y suelos pobres, siendo ideal para jardines secos. Además, sus fibras se utilizan artesanalmente.
+                            </li>
+                            <li>
+                                <strong>ALGODÓN (Gossypium hirsutum)</strong>
+                                Arbusto cultivado por sus cápsulas que contienen fibras suaves utilizadas para fabricar telas. Es una de las principales especies de algodón a nivel mundial. Requiere climas cálidos y suelos bien drenados. Sus semillas también se emplean para obtener aceite vegetal. Ha tenido gran importancia económica y cultural en la historia de la agricultura.
+                            </li>
+                            <li>
+                                <strong>CUCHUNUC (Gliricidia sepium)</strong>
+                                Árbol de rápido crecimiento y hojas compuestas, usado como sombra en cafetales y cerca viva. Sus flores rosadas atraen abejas y colibríes. Es una especie fijadora de nitrógeno que mejora la fertilidad del suelo. Su madera sirve como leña y su follaje como forraje para el ganado. Es originario de Mesoamérica y muy resistente a la sequía.
+                            </li>
+                            <li>
+                                <strong>CUPAPÉ (Cordia dodecandra)</strong>
+                                Árbol mediano de copa frondosa y hojas anchas, conocido también como "siricote". Su madera es muy apreciada en carpintería por su resistencia y belleza. Produce frutos redondos y dulces que son comestibles. Es originario del sureste de México y Centroamérica. Se utiliza tanto con fines ornamentales como en reforestación.
+                            </li>
+                            <li>
+                                <strong>HOJA ELEGANTE (Dieffenbachia seguine)</strong>
+                                Planta ornamental muy popular en interiores por sus hojas grandes, verdes con manchas blancas o amarillentas. Es originaria de las selvas tropicales de América. Prefiere sombra y humedad alta, pero su savia es tóxica si se ingiere. Se cultiva ampliamente como planta decorativa. Requiere riego constante y suelos bien drenados.
+                            </li>
+                            <li>
+                                <strong>TULIPÁN (Hibiscus rosa-sinensis)</strong>
+                                Arbusto florido de origen asiático, muy cultivado en zonas tropicales y subtropicales. Produce flores grandes y vistosas de colores variados. Se usa como planta ornamental y también en infusiones con propiedades medicinales. Necesita sol directo y riego frecuente. Es símbolo de belleza y vitalidad en muchas culturas.
+                            </li>
+                            <li>
+                                <strong>TOMATE DE ÁRBOL (Cyphomandra betacea)</strong>
+                                Arbusto o pequeño árbol que produce frutos ovalados de color rojo o anaranjado. Es originario de los Andes y cultivado por su fruto rico en vitaminas A y C. Se consume fresco o en jugos y mermeladas. Prefiere climas templados y suelos fértiles. Es una planta de rápido crecimiento y gran valor nutricional.
+                            </li>
+                            <li>
+                                <strong>TUNA DE CASTILLA (Opuntia ficus-indica)</strong>
+                                Cacto de tallos planos llamados pencas, cubiertos de espinas y gloquidios. Produce tunas dulces y comestibles de distintos colores. Es resistente a la sequía y se cultiva ampliamente en México por su fruto y nopal comestible. También se usa en medicina tradicional y como alimento para el ganado. Su cultivo favorece la conservación del suelo en zonas áridas.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+
+
+            <div class="icon-point point-b4" 
+                data-area="P CAPTUS" 
+                data-name="P CAPTUS" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>ROMPE ZAPATO (Sideroxylon celastrinum)</strong>
+                                El rompe zapato (Sideroxylon celastrinum) es un árbol o arbusto nativo de regiones tropicales y subtropicales de América. Se caracteriza por su madera muy dura y resistente, de ahí su nombre común. Sus hojas son pequeñas, y produce flores blancas y frutos redondeados. Tradicionalmente se ha utilizado en la medicina popular para tratar dolores estomacales, fiebre y problemas respiratorios. Además, su madera es apreciada para fabricar herramientas y postes debido a su durabilidad.
+                            </li>
+                            <li>
+                                <strong>PARAGÜITA (Zuelania guidonia)</strong>
+                                El paragüita (Zuelania guidonia) es un árbol tropical que puede alcanzar hasta 20 metros de altura. Es originario de América Central y el Caribe. Su madera es de color claro, liviana y fácil de trabajar, por lo que se utiliza en carpintería, embalajes y muebles. En la medicina tradicional, partes del árbol se usan para tratar afecciones de la piel y problemas digestivos. Además, es una especie que crece rápido y se adapta bien a diferentes suelos, lo que la hace útil en programas de reforestación.
+                            </li>
+                            <li>
+                                <strong>BROMELIA (Pitcairnia chiapensis)</strong>
+                                La bromelia (Pitcairnia chiapensis) es una planta tropical originaria del sur de México, especialmente del estado de Chiapas. Pertenece a la familia Bromeliaceae y se caracteriza por tener hojas alargadas y flores llamativas de colores vivos, como rojo o rosado. Crece en zonas húmedas y sombrías, generalmente sobre rocas o árboles (epífita). Es apreciada por su valor ornamental y su papel ecológico, ya que provee agua y refugio a pequeños animales e insectos en sus hojas en forma de roseta.
+                            </li>
+                            <li>
+                                <strong>MAGUEY (Agave ghiesbreghtii)</strong>
+                                El maguey (Agave ghiesbreghtii) es una planta suculenta originaria del sur de México y parte de Centroamérica. Se distingue por sus hojas gruesas, carnosas y con espinas en los bordes, dispuestas en forma de roseta. Es una especie muy resistente a la sequía y se adapta bien a climas áridos. Tradicionalmente, el maguey se utiliza para extraer fibras, bebidas como el pulque, y en algunos lugares sus hojas y flores se aprovechan como alimento. Además, ayuda a prevenir la erosión del suelo y tiene un importante valor ecológico y cultural.
+                            </li>
+                            <li>
+                                <strong>NOPAL DE SAN GABRIEL (Opuntia tomentosa)</strong>
+                                El nopal de San Gabriel (Opuntia tomentosa) es una especie de cactus nativa de México. Se caracteriza por tener pencas grandes, ovaladas y cubiertas de una fina pelusa o vellosidad, además de producir flores anaranjadas o rojas y frutos comestibles conocidos como tunas. Es una planta muy resistente a la sequía y se usa tanto en la alimentación (por sus pencas y frutos) como en la medicina tradicional, para tratar inflamaciones y problemas digestivos. También ayuda a conservar el suelo y la humedad en zonas áridas.
+                            </li>
+                            <li>
+                                <strong>NOCHEBUENA (Euphorbia pulcherrima)</strong>
+                                La nochebuena (Euphorbia pulcherrima) es una planta originaria de México, muy conocida por sus brácteas rojas intensas que rodean sus pequeñas flores amarillas y que la hacen símbolo tradicional de la Navidad. Puede crecer como arbusto o pequeño árbol y florece en invierno, coincidiendo con las festividades decembrinas. Además de su valor ornamental, es una especie importante culturalmente, ya que los pueblos originarios la utilizaban con fines medicinales y ceremoniales. Requiere buena luz y climas cálidos para desarrollarse adecuadamente.
+                            </li>
+                            <li>
+                                <strong>DAMA DANZANTE (Trichocentrum microchilum)</strong>
+                                La dama danzante (Trichocentrum microchilum) es una especie de orquídea originaria de México y Centroamérica. Se distingue por sus flores amarillas con manchas cafés o rojizas, que se asemejan a una figura humana con una falda, de ahí su nombre común. Es una planta epífita, lo que significa que crece sobre los árboles sin dañarlos, tomando la humedad del aire. Florece principalmente en temporada cálida y es muy apreciada por su belleza ornamental y su valor en la conservación de la biodiversidad tropical.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-c" 
+                data-area="B1 Nuevo" 
+                data-name="Area B1" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>MATZU (Cordia alba)</strong>
+                                El matzu (Cordia alba) es un arbusto o árbol pequeño originario de regiones tropicales de América. Se reconoce por sus hojas simples, flores blancas pequeñas y frutos redondeados, que suelen ser de color anaranjado o amarillento al madurar. Es una especie resistente que crece en zonas secas o semiáridas y se utiliza para reforestar y controlar la erosión del suelo. Además, su madera ligera puede emplearse en trabajos sencillos de carpintería, y en la medicina tradicional se le atribuyen propiedades para aliviar molestias respiratorias.
+                            </li>
+                            <li>
+                                <strong>COYOL DE OBISPO (Thevetia ahouai)</strong>
+                                El coyol de obispo (Thevetia ahouai) es un árbol pequeño o arbusto originario de México, Centroamérica y el Caribe. Se distingue por sus flores amarillas o anaranjadas en forma de trompeta y sus frutos redondeados, que contienen semillas tóxicas si se ingieren. A pesar de su toxicidad, se utiliza como planta ornamental por su atractiva floración y follaje brillante. También tiene importancia ecológica, ya que atrae mariposas y abejas, y en algunos lugares se emplea en cercas vivas o reforestación por su buena adaptación a climas cálidos y secos.
+                            </li>
+                            <li>
+                                <strong>PALO DE BRASIL (Haematoxylum brasiletto)</strong>
+                                El palo de Brasil (Haematoxylum brasiletto) es un árbol mediano originario de México y Centroamérica. Se caracteriza por su madera muy dura y de color rojizo intenso, de donde se extrae un tinte natural llamado brasileína, usado tradicionalmente para teñir telas y fabricar colorantes. Además, su madera es apreciada en ebanistería y artesanías por su resistencia y belleza. En la medicina tradicional, se ha utilizado para tratar problemas de la piel y dolores estomacales. Es una especie tolerante a la sequía y de gran valor ecológico y cultural en las regiones donde crece.
+                            </li>
+                            <li>
+                                <strong>GAVILÁN (Albizia guachapele)</strong>
+                                El gavilán (Albizia guachapele) es un árbol de crecimiento rápido originario de América tropical. Se caracteriza por su follaje fino y frondoso y sus flores pequeñas, blancas y plumosas, que atraen a polinizadores como abejas y aves. Su madera es ligera y se utiliza en construcción liviana, muebles y artesanías. Además, como miembro de la familia de las leguminosas, ayuda a fijar nitrógeno en el suelo, mejorando la fertilidad del terreno, y se emplea en programas de reforestación y conservación del ecosistema.
+                            </li>
+                            <li>
+                                <strong>FLOR DE MAYO (Plumeria rubra)</strong>
+                                La flor de mayo (Plumeria rubra) es un árbol pequeño o arbusto originario de América tropical, conocido por sus flores fragantes y vistosas, que pueden ser rojas, rosas, blancas o amarillas. Es muy apreciada como planta ornamental en jardines y parques, y sus flores se utilizan en la elaboración de aromas, perfumes y ofrendas culturales. La especie requiere climas cálidos y suelos bien drenados, y además aporta sombra y valor estético a los espacios donde se planta.
+                            </li>
+                            <li>
+                                <strong>GUAYACÁN (Guaiacum sanctum)</strong>
+                                El guayacán (Guaiacum sanctum) es un árbol de gran porte y crecimiento lento, nativo de México, el Caribe y América Central. Su madera es extremadamente dura y densa, de color oscuro, muy apreciada en ebanistería y construcción de objetos resistentes. Además de su valor maderable, el guayacán produce flores azules o violetas que atraen polinizadores. Tradicionalmente, se le ha utilizado en medicina popular para tratar inflamaciones y problemas articulares. Es una especie resistente a la sequía y tiene importancia ecológica y cultural en las regiones donde crece.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-d" 
+                data-area="E-Jardin" 
+                data-name="Area E" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>TALISMÉCATE (Daphnopsis americana)</strong>
+                                El talismécate (Daphnopsis americana) es un arbusto o pequeño árbol originario de México y Centroamérica. Se caracteriza por sus hojas verdes y simples y sus pequeñas flores blancas o verdosas, que suelen crecer en racimos. En la medicina tradicional, se ha usado para tratar afecciones respiratorias, digestivas y como antiinflamatorio. Es una especie resistente a climas secos y forma parte de la vegetación secundaria en bosques tropicales y subtropicales, contribuyendo a la conservación del suelo y la biodiversidad local.
+                            </li>
+                            <li>
+                                <strong>PATA DE ELEFANTE (Beaucarnea goldmanii)</strong>
+                                La pata de elefante (Beaucarnea goldmanii) es un arbusto o árbol pequeño suculento originario de México y Centroamérica. Se caracteriza por su tronco engrosado en la base, que almacena agua, y sus hojas largas y delgadas que brotan en forma de roseta en la parte superior, asemejando la pata de un elefante. Es muy resistente a la sequía y se utiliza como planta ornamental en jardines y interiores. Su adaptación a climas áridos y su bajo mantenimiento la hacen ideal para la decoración sostenible y xerófila.
+                            </li>
+                            <li>
+                                <strong>CHAPERLA (Lonchocarpus guatemalensis)</strong>
+                                La chaperla (Lonchocarpus guatemalensis) es un árbol de tamaño mediano a grande, originario de México y Centroamérica. Se caracteriza por su follaje verde y flores pequeñas de color blanco o crema, agrupadas en racimos. Su madera es dura y resistente, utilizada en construcción, carpintería y fabricación de herramientas. Además, como miembro de la familia de las leguminosas, contribuye a fijar nitrógeno en el suelo, mejorando su fertilidad. En la medicina tradicional, algunas partes del árbol se emplean para tratar afecciones digestivas y respiratorias.
+                            </li>
+                            <li>
+                                <strong>MALUCO (Genipa americana)</strong>
+                                El maluco (Genipa americana) es un árbol tropical originario de América Central y Sudamérica. Se distingue por su follaje denso, hojas grandes y flores blancas, así como por sus frutos redondos y verdes, que al madurar pueden usarse para hacer tintes naturales, jugos y productos medicinales. Es apreciado tanto por su valor ornamental como por su uso en la medicina tradicional, donde se emplea para tratar problemas digestivos y de la piel. Además, contribuye a la sombra y conservación del suelo en áreas tropicales.
+                            </li>
+                            <li>
+                                <strong>CAULOTE (Guazuma ulmifolia)</strong>
+                                El caulote (Guazuma ulmifolia) es un árbol mediano originario de México y Centroamérica. Se caracteriza por su follaje verde brillante, hojas acorazonadas y flores amarillas pequeñas, que atraen polinizadores. Su madera es ligera y fácil de trabajar, utilizada en carpintería, muebles y cercas. Además, tiene aplicaciones en la medicina tradicional, empleándose para tratar problemas digestivos y respiratorios. Es una especie resistente a la sequía y se utiliza en programas de reforestación y conservación de suelos.
+                            </li>
+                            <li>
+                                <strong>CAÑA AGRIA (Costus scaber)</strong>
+                                La caña agria (Costus scaber) es una planta herbácea tropical originaria de México y Centroamérica. Se caracteriza por sus tallos erectos y hojas verdes grandes, así como por sus flores llamativas, generalmente rojas o naranjas, que atraen polinizadores como colibríes e insectos. Tradicionalmente se ha utilizado en la medicina popular para tratar problemas digestivos, inflamaciones y como diurético. También tiene valor ornamental en jardines y huertos debido a su apariencia exótica y su fácil adaptación a climas húmedos.
+                            </li>
+                            <li>
+                                <strong>COJÓN DE COCHI (Stemmadenia pubescens)</strong>
+                                El cojón de cochi (Stemmadenia pubescens) es un árbol pequeño o arbusto originario de México y Centroamérica. Se caracteriza por sus hojas verdes y alargadas y sus flores blancas o amarillentas, que suelen ser fragantes. Tradicionalmente se le atribuyen usos medicinales, especialmente para tratar afecciones respiratorias y digestivas. Es una especie resistente y adaptable a diferentes tipos de suelos, contribuyendo a la biodiversidad y conservación de ecosistemas locales.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-e" 
+                data-area="B-Jardin" 
+                data-name="Area B-J" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>ALMENDRO (Terminalia catappa)</strong>
+                                El almendro (Terminalia catappa) es un árbol tropical de gran tamaño originario del sur de Asia y muy común en zonas costeras de América Latina. Se caracteriza por su follaje amplio y hojas grandes que cambian de color en temporada seca, así como por sus frutos comestibles en forma de almendra. Es muy apreciado como árbol ornamental y de sombra, y su madera se utiliza en carpintería y construcción ligera.
+                            </li>
+                            <li>
+                                <strong>PANELITA (Malvaviscus arboreus)</strong>
+                                La panelita (Malvaviscus arboreus) es un arbusto perenne originario de México y Centroamérica. Se caracteriza por sus flores rojas o rosadas en forma de campana, que no se abren completamente y atraen a colibríes e insectos polinizadores. Es apreciada por su valor ornamental en jardines y parques, y también tiene usos en la medicina tradicional, como en infusiones para tratar problemas digestivos y respiratorios. Además, es una especie resistente y de fácil cultivo, adaptándose bien a diferentes tipos de suelo y clima.
+                            </li>
+                            <li>
+                                <strong>GUACHIPILÍN (Diphysa americana)</strong>
+                                El guachipilín (Diphysa americana) es un árbol de mediano a gran tamaño originario de México y Centroamérica. Se caracteriza por su follaje frondoso y flores amarillas que crecen en racimos, y produce frutos alargados tipo vaina. Su madera es ligera y resistente, utilizada en carpintería, construcción y elaboración de herramientas. Además, es una especie leguminosa, por lo que ayuda a fijar nitrógeno en el suelo, mejorando su fertilidad, y se emplea en programas de reforestación y conservación del ecosistema.
+                            </li>
+                            <li>
+                                <strong>CEDRO (Cedrela odorata)</strong>
+                                El cedro (Cedrela odorata) es un árbol de gran porte originario de América tropical, muy valorado por su madera aromática, dura y resistente a la humedad y a insectos. Se utiliza ampliamente en carpintería fina, muebles, puertas, instrumentos musicales y construcciones. Además, sus hojas y flores atraen polinizadores, contribuyendo a la biodiversidad del ecosistema. Es una especie que requiere climas cálidos y suelos bien drenados, y se emplea también en programas de reforestación y conservación forestal.
+                            </li>
+                            <li>
+                                <strong>SALCHICHA (Kigelia africana)</strong>
+                                El salchicha (Kigelia africana) es un árbol originario de África tropical, conocido por sus frutos largos y colgantes en forma de salchicha, que pueden medir hasta 60 cm. Produce flores grandes, rojas o moradas, que son muy atractivas para murciélagos y polinizadores nocturnos. Aunque los frutos frescos son tóxicos, se utilizan en medicina tradicional para tratar infecciones de la piel, problemas digestivos y como antiinflamatorio. También se cultiva como árbol ornamental por su apariencia llamativa y su sombra densa.
+                            </li>
+                            <li>
+                                <strong>ANTURIO (Anthurium riogrense)</strong>
+                                El anturio (Anthurium riogrense) es una planta ornamental tropical originaria de América Central y Sudamérica. Se caracteriza por sus hojas grandes, brillantes y en forma de corazón, y sus flores en espata de colores vivos, generalmente rojas, rosas o blancas, con espádice central. Es muy apreciada en jardinería y decoración interior por su belleza y longevidad de floración. Crece mejor en ambientes húmedos, con sombra parcial y suelos bien drenados, y también contribuye a mejorar la calidad del aire en interiores.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-f"  
+     data-area="B-A" 
+     data-name="Area B-A" 
+     data-description='
+        <div class="area-description">
+            <ul>
+                <li>
+                    <strong>La clavelina (Capparis flexuosa)</strong>
+                    es un arbusto o enredadera perenne muy ramificada, con hojas duras y flores grandes de color blanco o rosado. Es resistente a la sequía y se adapta bien a suelos pobres y pedregosos, comunes en zonas costeras y áridas. Se utiliza como planta ornamental y para restauración ecológica en terrenos degradados.
+                </li>
+                <li>
+                    <strong>Cola de pescado (Caryota urens)</strong>
+                    es una palma de gran altura, que puede alcanzar hasta 20 metros. Se distingue por sus hojas compuestas en forma de aleta o "cola de pescado". Es originaria del sudeste asiático y crece bien en climas tropicales cálidos, con suelos húmedos y fértiles. Su savia se usa tradicionalmente para obtener azúcar y vino de palma.
+                </li>
+                <li>
+                    <strong>Talismécate (Daphnopsis americana)</strong>
+                    es un árbol o arbusto de hasta 15 metros de altura, con hojas simples, brillantes y de color verde intenso. Es una especie dioica, con flores masculinas y femeninas en árboles distintos. Se encuentra en bosques secos tropicales y se valora por su madera, utilizada artesanalmente y para cercas vivas.
+                </li>
+                <li>
+                    <strong>Crucecita (Pisonia aculeata)</strong>
+                    es una planta trepadora o arbusto con tallos espinosos y hojas simples. Produce frutos pegajosos que se adhieren al pelaje de los animales para dispersarse. Crece en regiones cálidas y húmedas, donde forma matorrales densos o se enreda sobre otras plantas. Se usa ocasionalmente como barrera viva.
+                </li>
+                <li>
+                    <strong>Barba de mantel (Bauhinia divaricata)</strong>
+                    es un pequeño árbol o arbusto ornamental con hojas bilobuladas, en forma de corazón dividido, y flores blancas o rosadas muy vistosas. Florece durante gran parte del año y se adapta a climas cálidos y suelos ligeros o arenosos. Se cultiva ampliamente por su valor decorativo.
+                </li>
+                <li>
+                    <strong>Manzana de mar (Crataeva cata)</strong>
+                    es un árbol mediano de copa redondeada y follaje denso. Produce flores blancas o amarillentas y frutos redondos similares a pequeñas manzanas. Es común en regiones tropicales y costeras, resistente a la salinidad y la sequía. Además, se le atribuyen propiedades medicinales y se utiliza en cercos o como árbol de sombra.
+                </li>
+                <li>
+                    <strong>Corozo (Attalea cohune)</strong>
+                    es una palma grande con tronco solitario que puede alcanzar hasta 25 metros de altura. Produce racimos de frutos grandes con semillas ricas en aceite, conocido como aceite de cohune. Es nativa de México y Centroamérica, creciendo en selvas húmedas tropicales. Su madera y hojas también se aprovechan para construcción y techado.
+                </li>
+                <li>
+                    <strong>Guano (Sabal mexicana)</strong>
+                    es una palma robusta con hojas en forma de abanico y tronco recto. Puede superar los 15 metros de altura y es muy resistente tanto a la sequía como a las inundaciones. Es nativa del sur de México y se usa ampliamente en paisajismo, reforestación y como fuente de sombra.
+                </li>
+                <li>
+                    <strong>Chichón (Astrocaryum mexicanum)</strong>
+                    es una palma mediana de tronco cubierto por espinas negras y hojas pinnadas. Se encuentra en bosques húmedos tropicales y produce frutos comestibles, aunque su manejo es complicado por las espinas. Se utiliza como planta ornamental y para la elaboración de artesanías y aceites.
+                </li>
+                <li>
+                    <strong>Aretillo (Capparis incana)</strong>
+                    es un arbusto pequeño de hojas grisáceas o vellosas por el envés. Produce flores pequeñas y frutos redondos. Habita en zonas áridas o costeras, tolerando suelos salinos y pobres. Es útil en la revegetación de terrenos degradados y como planta resistente a la sequía.
+                </li>
+                <li>
+                    <strong>Totoposte (Licania arborea)</strong>
+                    es un árbol mediano o grande que puede alcanzar hasta 25 metros de altura, con copa densa y follaje brillante. Sus semillas contienen un aceite aprovechable y su madera es dura y duradera. Crece en selvas tropicales húmedas de México y Centroamérica, donde se utiliza como especie forestal y de sombra.
+                </li>
+            </ul>
+        </div>
+    '>
+</div>
+
+            <div class="icon-point point-g" 
+    data-area="K" 
+    data-name="Area K" 
+    data-description='
+        <div class="area-description">
+            <ul>
+                <li>
+                    <strong>Mora (Maclura tinctoria)</strong>
+                    La mora (Maclura tinctoria) es un árbol mediano a grande, originario de América
+                    tropical, que puede alcanzar hasta 30 metros de altura. Su madera es dura,
+                    resistente y muy apreciada para construcciones, muebles y cercas. De su
+                    corteza se obtiene un tinte amarillo natural utilizado artesanalmente. Crece en
+                    bosques secos y húmedos, y se adapta bien a suelos variados, siendo también
+                    valorada por su sombra y usos medicinales tradicionales.
+                </li>
+                <li>
+                    <strong>Mojú (Brosimum alicastrum)</strong>
+                    El mojú (Brosimum alicastrum), también conocido como ramón o árbol del pan
+                    maya, es un árbol grande de follaje denso que puede superar los 30 metros de
+                    altura. Es nativo de las selvas tropicales de México y Centroamérica. Sus frutos
+                    y semillas son comestibles y muy nutritivos, y se emplean como alimento humano
+                    y forraje para el ganado. Además, su madera es útil en la construcción ligera y
+                    para sombra en sistemas agroforestales.
+                </li>
+                <li>
+                    <strong>Cedro (Cedrela odorata)</strong>
+                    El cedro (Cedrela odorata) es un árbol majestuoso de crecimiento rápido que
+                    puede alcanzar hasta 40 metros de altura. Es originario de las zonas tropicales
+                    de América y produce una madera de alta calidad, ligera, aromática y resistente
+                    a insectos, muy utilizada en ebanistería, muebles finos e instrumentos musicales.
+                    Prefiere suelos bien drenados y climas cálidos, aunque puede adaptarse a
+                    distintas condiciones. Es una especie importante en la reforestación tropical.
+                </li>
+                <li>
+                    <strong>Mango (Mangifera indica)</strong>
+                    El mango (Mangifera indica) es un árbol frutal grande y perenne, de copa amplia
+                    y hojas brillantes, originario del sur de Asia. Se cultiva ampliamente en regiones
+                    tropicales y subtropicales por su fruto dulce y aromático, uno de los más
+                    consumidos en el mundo. Además de su valor alimenticio, se aprovechan sus
+                    hojas y corteza en la medicina tradicional. Es una planta resistente que prospera
+                    en suelos profundos y bien drenados, con exposición al sol.
+                </li>
+            </ul>
+        </div>
+    ' 
+    style="top: 45%; left: 42%;">
+</div>
+
+            <div class="icon-point point-h" 
+                data-area="F" 
+                data-name="Area F" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>PACAYA (Chamaedorea tepejilote)</strong>
+                                La pacaya (Chamaedorea tepejilote) es una palma del sotobosque tropical que alcanza de 2 a 7 metros de altura. Es nativa de México y Centroamérica, especialmente de regiones húmedas y sombreadas. Su inflorescencia masculina inmadura es comestible y se consume como verdura en Guatemala y El Salvador. Es una planta ornamental muy apreciada por su elegancia y por adaptarse bien a interiores o jardines húmedos y sombríos.
+                            </li>
+                            <li>
+                                <strong>CAMEDOR CHILBH (Chamaedorea stolonifera)</strong>
+                                El camedor chilbh (Chamaedorea stolonifera) es una palma pequeña que crece en forma de grupos gracias a sus tallos estoloníferos, alcanzando hasta 2 metros de altura. Es originaria del sur de México y prospera en ambientes húmedos y con sombra. Se cultiva principalmente como planta ornamental de interior por su follaje verde oscuro y elegante, y por su capacidad de resistir poca luz.
+                            </li>
+                            <li>
+                                <strong>MANACA (Attalea guacuyule)</strong>
+                                La manaca (Attalea guacuyule) es una palma de gran tamaño, originaria del suroeste de México y Centroamérica. Puede alcanzar más de 20 metros de altura y posee hojas largas y arqueadas que brindan una sombra amplia. Sus frutos son grandes y contienen semillas ricas en aceite, mientras que sus hojas se utilizan tradicionalmente para techos de palma y artesanías. Es resistente a la sequía y crece bien en suelos arenosos o calcáreos.
+                            </li>
+                            <li>
+                                <strong>COLA DE PESCADO (Chamaedorea ernesti-augusti)</strong>
+                                La palma cola de pescado (Chamaedorea ernesti-augusti) es una especie tropical de porte mediano, con hojas divididas que recuerdan la forma de una cola de pez. Es originaria de Centroamérica y crece en zonas húmedas y sombreadas. Se utiliza ampliamente como planta ornamental por su aspecto exótico y su resistencia a condiciones de poca luz, siendo ideal para interiores y jardines tropicales.
+                            </li>
+                            <li>
+                                <strong>PACAYA (Chamaedorea costaricana)</strong>
+                                La pacaya costarricense (Chamaedorea costaricana) es una palma de tallos delgados y hojas pinnadas que puede alcanzar hasta 6 metros de altura. Es originaria de los bosques húmedos de Costa Rica y otras zonas de Centroamérica. Se emplea como planta ornamental en jardines tropicales por su elegancia y por adaptarse bien a la sombra y la humedad. También forma parte del sotobosque en ecosistemas naturales.
+                            </li>
+                            <li>
+                                <strong>PALMA DE COLLAR (Chamaedorea geonomiformis)</strong>
+                                La palma de collar (Chamaedorea geonomiformis) es una pequeña palma tropical de tallo solitario y hojas pinnadas, muy utilizada como ornamental. Es originaria de los bosques húmedos de México y Guatemala, donde crece en zonas sombreadas. Su nombre proviene del anillo claro o "collar" visible en sus tallos. Es una especie ideal para interiores y jardines de sombra por su belleza y fácil mantenimiento.
+                            </li>
+                            <li>
+                                <strong>PALMA DE COCO (Cocos nucifera)</strong>
+                                La palma de coco (Cocos nucifera) es una de las palmas más reconocidas del mundo, alcanzando hasta 30 metros de altura. Es originaria de las regiones tropicales del Indo-Pacífico, aunque hoy se cultiva globalmente. Produce el coco, fruto de múltiples usos alimenticios e industriales. Se adapta bien a suelos arenosos y ambientes costeros, siendo símbolo de climas cálidos y playas tropicales.
+                            </li>
+                            <li>
+                                <strong>PALMA NACHA (Chamaedorea oblongata)</strong>
+                                La palma nacha (Chamaedorea oblongata) es una especie de sotobosque tropical que alcanza entre 2 y 4 metros de altura. Es nativa del sur de México y Centroamérica, y se caracteriza por sus hojas alargadas y arqueadas. Se utiliza como planta ornamental por su elegancia y resistencia a la sombra, siendo común en jardines y espacios interiores con poca luz.
+                            </li>
+                            <li>
+                                <strong>COROZO (Attalea cohune)</strong>
+                                El corozo (Attalea cohune) es una palma alta y robusta, que puede alcanzar hasta 25 metros de altura. Es nativa de las selvas tropicales de México y Centroamérica. Produce frutos grandes con semillas que contienen el aceite de cohune, utilizado tradicionalmente en la cocina y la industria. Además, sus hojas se usan para techos y su tronco como material de construcción. Es una especie importante en los ecosistemas tropicales.
+                            </li>
+                            <li>
+                                <strong>CHICOZAPOTE (Manilkara zapota)</strong>
+                                El chicozapote (Manilkara zapota), también conocido como zapote o chicle, es un árbol de hoja perenne que puede llegar a medir hasta 30 metros de altura. Es originario del sur de México y Centroamérica. Produce un fruto dulce y aromático muy apreciado, y su látex natural fue históricamente usado para elaborar chicle. Su madera es dura y resistente, utilizada en construcciones y artesanías.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-i" 
+                data-area="A-9" 
+                data-name="Area A-9" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>PALMA AMERICANA DE ACEITE (Elaeis guineensis)</strong>
+                                La palma americana de aceite (Elaeis guineensis) es una especie originaria del África occidental, ampliamente cultivada en regiones tropicales de América. Puede alcanzar hasta 20 metros de altura y posee hojas pinnadas de gran longitud. Su fruto, rico en aceite, se utiliza para la producción de aceite vegetal y cosméticos. Es una planta muy productiva, adaptada a climas cálidos y húmedos, y se cultiva principalmente en plantaciones agrícolas de bajo relieve.
+                            </li>
+                            <li>
+                                <strong>TOTOPOSTE (Licania arborea)</strong>
+                                El totoposte (Licania arborea) es un árbol grande, de copa densa y hojas brillantes, que puede alcanzar hasta 25 metros de altura. Es originario de las selvas tropicales de México y Centroamérica. Su madera es dura y resistente, utilizada en carpintería y construcción. Las semillas contienen aceites aprovechables, y su follaje denso brinda buena sombra, por lo que también se emplea en programas de reforestación y como árbol ornamental.
+                            </li>
+                            <li>
+                                <strong>BEJUCO (Hiraea fagifolia)</strong>
+                                El bejuco (Hiraea fagifolia) es una planta trepadora leñosa que se encuentra en bosques tropicales de México y América Central. Posee tallos delgados y flexibles que le permiten ascender sobre otros árboles. Sus hojas son simples y sus flores amarillas atraen a diversos polinizadores. Se utiliza tradicionalmente como planta medicinal y para proteger suelos en zonas erosionadas, gracias a su crecimiento vigoroso y cobertura densa.
+                            </li>
+                            <li>
+                                <strong>LLORA SANGRE (Pterocarpus rohrii)</strong>
+                                La llora sangre (Pterocarpus rohrii) es un árbol mediano a grande, originario de las regiones tropicales de América. Puede alcanzar hasta 30 metros de altura y se distingue por la savia rojiza que exuda su tronco al cortarse, de ahí su nombre. Su madera es muy apreciada en carpintería y ebanistería por su dureza y color atractivo. Además, se utiliza en medicina tradicional y como especie ornamental en jardines y avenidas.
+                            </li>
+                            <li>
+                                <strong>ESPINO BLANCO (Adelia barbinervis)</strong>
+                                El espino blanco (Adelia barbinervis) es un arbusto o árbol pequeño que alcanza hasta 8 metros de altura. Es nativo de México y América Central, y se adapta bien a climas cálidos y secos. Posee ramas espinosas y hojas simples, y florece con pequeñas flores verdosas o amarillentas. Se emplea comúnmente en cercas vivas, para reforestación de zonas áridas y como planta melífera que atrae abejas.
+                            </li>
+                            <li>
+                                <strong>ACEITUNO (Simarouba amara)</strong>
+                                El aceituno (Simarouba amara) es un árbol mediano a grande, que puede alcanzar de 20 a 35 metros de altura. Es originario de las selvas tropicales de América y se reconoce por su tronco recto y corteza gris. Su madera es liviana y útil para carpintería y embalajes. Además, posee propiedades medicinales, y sus hojas y corteza se han utilizado tradicionalmente contra problemas digestivos. Es una especie adaptada a suelos húmedos y bien drenados.
+                            </li>
+                            <li>
+                                <strong>GUANACASTE (Enterolobium cyclocarpum)</strong>
+                                El guanacaste (Enterolobium cyclocarpum) es un árbol majestuoso de gran tamaño, que puede alcanzar hasta 40 metros de altura y desarrollar una copa amplia y extendida. Es originario de América tropical y es considerado símbolo nacional de Costa Rica. Produce frutos en forma de oreja y semillas duras utilizadas en artesanías. Su madera es ligera y útil en carpintería, y se cultiva para dar sombra en potreros y caminos rurales.
+                            </li>
+                            <li>
+                                <strong>TEMPISQUE (Sideroxylon capiri)</strong>
+                                El tempisque (Sideroxylon capiri) es un árbol grande y de copa redondeada, originario de las zonas tropicales de México y Centroamérica. Puede alcanzar hasta 30 metros de altura y posee madera dura, resistente y de alta calidad, empleada en construcción y ebanistería. Es una especie muy resistente a la sequía y al calor, por lo que se utiliza también en reforestación y como árbol de sombra en zonas ganaderas.
+                            </li>
+                            <li>
+                                <strong>MANGO (Mangifera indica)</strong>
+                                El mango (Mangifera indica) es un árbol frutal grande y perenne, de copa densa y hojas verdes brillantes, originario del sur de Asia. Puede alcanzar entre 10 y 45 metros de altura. Su fruto, el mango, es dulce, jugoso y muy apreciado a nivel mundial. Se cultiva ampliamente en regiones tropicales y subtropicales. Además, sus hojas y corteza tienen usos medicinales, y su sombra lo hace ideal para huertos y jardines.
+                            </li>
+                            <li>
+                                <strong>JABILLA (Hura polyandra)</strong>
+                                La jabilla (Hura polyandra) es un árbol grande que puede superar los 25 metros de altura, originario de América tropical. Posee un tronco recto con espinas cónicas y hojas grandes y brillantes. Su fruto tiene forma de cápsula leñosa que se fragmenta al madurar, liberando semillas con fuerza. Su savia es tóxica y se ha usado tradicionalmente como veneno de pesca. Aun así, se valora como árbol ornamental y para sombra en áreas rurales.
+                            </li>
+                            <li>
+                                <strong>TECA (Tectona grandis)</strong>
+                                La teca (Tectona grandis) es un árbol originario del sudeste asiático, ampliamente cultivado en regiones tropicales de América por su valiosa madera. Puede alcanzar de 25 a 30 metros de altura, con hojas grandes y ásperas. Su madera es muy duradera, resistente a la humedad y a las termitas, por lo que se utiliza en muebles finos, embarcaciones y construcción. Es una especie de rápido crecimiento y gran valor económico.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-j" 
+                data-area="A-8" 
+                data-name="Area A-8" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>PRIMAVERA (Roseodendron donnell-smithii)</strong>
+                                La Primavera (Roseodendron donnell-smithii) es un árbol ornamental de la familia Bignoniaceae, nativo de México y Centroamérica. Puede alcanzar hasta 25 metros de altura y se caracteriza por su floración espectacular de color amarillo intenso, que ocurre antes de que broten las hojas. Es una especie maderable y ornamental, muy apreciada para embellecer parques y avenidas por su vistoso follaje y sombra. Crece bien en climas cálidos y secos con suelos bien drenados.
+                            </li>
+                            <li>
+                                <strong>HULE (Castilla elastica)</strong>
+                                Perteneciente a la familia Moracea es un árbol tropical originario de México y Sudamérica, conocido por ser una de las principales fuentes naturales de látex, sustancia usada tradicionalmente para producir caucho o goma natural. Puede alcanzar hasta 30 metros de altura, con un tronco grueso y corteza que exuda el látex blanco al ser cortada. Además de su uso industrial, también tiene aplicaciones medicinales y constructivas. Era una planta de gran importancia cultural para las civilizaciones prehispánicas, que utilizaban su látex para fabricar pelotas y otros objetos rituales.
+                            </li>
+                            <li>
+                                <strong>MOJÚ (Brosimum alicastrum)</strong>
+                                Mojú (Brosimum alicastrum), perteneciente a la familia Moraceae. Es un árbol grande y frondoso originario de México y Sudamérica, que puede alcanzar hasta 40 metros de altura. También es conocido como ramón u ojoche. Sus frutos y semillas son comestibles y muy nutritivos, y tradicionalmente han sido parte de la alimentación de comunidades indígenas. El Mojú tiene múltiples usos maderables y medicinales: su madera es resistente y se utiliza en construcción y carpintería, mientras que diversas partes del árbol se emplean en remedios naturales. Además, contribuye a la conservación ecológica, ya que sirve de alimento para la fauna silvestre y ayuda a mantener la fertilidad del suelo.
+                            </li>
+                            <li>
+                                <strong>NAMBIMBO (Ehretia tinifolia)</strong>
+                                El Nambimbo (Ehretia tinifolia) es un árbol mediano de la familia Boraginaceae, originario de México y Centroamérica. Puede alcanzar hasta 15 metros de altura y se caracteriza por sus flores pequeñas y blancas y frutos rojizos o morados al madurar. Es una especie ornamental y nativa, muy útil en reforestación por la sombra que proporciona y porque sus frutos sirven de alimento para la fauna silvestre. Además, tiene usos tradicionales y ecológicos en varias regiones del sur de México.
+                            </li>
+                            <li>
+                                <strong>BESUCO DE SAN JUAN (Stigmaphyllon dichotomum)</strong>
+                                El Besuco de San Juan (Stigmaphyllon dichotomum) es una liana o bejuco leñoso, perteneciente a la familia Apocynaceae, encontrado en Puerto Rico, específicamente en los mogotes del sur de Quebradillas. Se caracteriza por trepar sobre el dosel de bosque, con flores agrupadas que muestran "manchitas rojas brillantes" en sus inflorescencias. Es una especie endémica de esa región, lo que significa que no se encuentra de manera natural en muchos otros lugares.
+                            </li>
+                            <li>
+                                <strong>SONZAPOTE (Licania platypus)</strong>
+                                El Sonzapote (Licania platypus) es un árbol nativo de México hasta Colombia que pertenece a la familia Chrysobalanaceae. Puede alcanzar hasta 35 metros de altura y se caracteriza por sus grandes frutos comestibles, rugosos y de pulpa carnosa de color amarillo o naranja. Es una especie muy valorada tanto por su fruto (aunque a menudo menos apreciado que otros zapotes) como por su madera, y localmente se le atribuyen usos medicinales. Crece en climas cálidos y está asociado al bosque tropical perennifolio.
+                            </li>
+                            <li>
+                                <strong>MORA (Maclura tinctoria)</strong>
+                                La Mora (Maclura tinctoria) es un árbol que pertenece a la familia Moraceae, nativo de toda América, con una distribución que se extiende desde México hasta Sudamérica. Se caracteriza por su valor como especie maderable y, tradicionalmente, por su uso como tinte (principalmente amarillo o anaranjado) que se extrae de su madera. Adicionalmente, se le otorgan usos medicinales en la medicina tradicional. Es una especie importante en diversos ecosistemas por su presencia y utilidad histórica.
+                            </li>
+                            <li>
+                                <strong>TOTOPOSTE (Licania arborea)</strong>
+                                El Totoposte (Licania arborea) es un árbol tropical que pertenece a la familia Chrysobalanaceae, la misma que el Sonzapote. Su distribución es amplia, abarcando desde México hasta Sudamérica, principalmente en climas cálidos asociados a bosques tropicales. Se trata de una especie multipropósito muy apreciada, que puede alcanzar hasta 25 metros de altura. Es valorada por su madera (empleada en construcciones rurales y postes) y es reconocida en la medicina tradicional con usos medicinales diversos (como remedios capilares, para tratar la sarna o contra las hemorroides). Además, sus semillas se utilizaron históricamente para fabricar jabones. Actualmente, en México, se le considera una especie amenazada debido al aprovechamiento no regulado.
+                            </li>
+                            <li>
+                                <strong>UJTUI (Tapirira mexicana)</strong>
+                                El Ujtui (Tapirira mexicana), también conocido comúnmente como Duraznillo o Bienvenido, es un árbol semicaducifolio que pertenece a la familia Anacardiaceae (la misma del mango y el marañón). Es nativo de México y Centroamérica y puede alcanzar alturas de hasta 30 metros. Se caracteriza por sus frutos en forma de drupas amarillas que son comestibles y que, aunque poco valoradas, son consumidas localmente. El Ujtui es una especie maderable muy apreciada, utilizada para la fabricación de muebles y postes. También se usa para proporcionar sombra en plantaciones de café y, en algunas regiones, se le dan usos medicinales (como remedio postparto).
+                            </li>
+                            <li>
+                                <strong>HIERBA SANTILLA (Piper marginatum)</strong>
+                                La Hierba santilla (Piper marginatum) es una planta que pertenece a la familia Piperaceae (la misma de la pimienta negra). Es una especie de arbusto o subarbusto con un aroma similar al anís, con una distribución que abarca desde América Central y del Sur hasta las Antillas. Se caracteriza por su uso como: Medicinal: Tradicionalmente se emplea para aliviar resfriados, como antiinflamatorio, emenagoga (estimula el flujo menstrual) y diurética. Su tintura se ha usado para la amenorrea. Ornamental: Se cultiva en Estados Unidos y Australia por su atractivo.
+                            </li>
+                            <li>
+                                <strong>CAMEDOR CHILBH (Chamaedorea elegans)</strong>
+                                La Camedor chilbh (Chamaedorea elegans) es una palmera pequeña, también conocida como Palma de salón. Pertenece a la familia Arecaceae y es originaria de las selvas tropicales de México y Guatemala. Es muy apreciada como planta de interior por su elegancia y su resistencia a condiciones de poca luz. Puede alcanzar hasta 2.5 metros de altura en maceta. Es utilizada principalmente como planta ornamental en interiores y jardines sombreados. Además, su follaje se usa en arreglos florales y es conocida por su capacidad para purificar el aire. En algunas regiones, el fruto también puede ser comestible.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+            <div class="icon-point point-k" 
+                data-area="H" 
+                data-name="Area H" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>AMENDÚ (Ceratozamia robusta)</strong>
+                                El Amendú (Ceratozamia robusta) es una planta que pertenece a la familia Zamiaceae. Su distribución abarca México, Belice y Guatemala. Es una especie utilizada con fines ornamentales.
+                            </li>
+                            <li>
+                                <strong>PALMA BOLA (Zamia furfuracea)</strong>
+                                La Palma bola (Zamia furfuracea) pertenece a la familia Zamiaceae. Su distribución natural se encuentra en México, específicamente en Veracruz. Es una especie cultivada por su valor ornamental.
+                            </li>
+                            <li>
+                                <strong>IBIRÁ PUITÁ (Peltophorum dubium)</strong>
+                                El Ibirá puitá (Peltophorum dubium) es un árbol que pertenece a la familia Fabaceae. Su distribución se concentra en el sur de América, incluyendo Argentina, Paraguay y Uruguay. Esta especie es altamente valorada por sus usos maderables, medicinales y tintóreos.
+                            </li>
+                            <li>
+                                <strong>PALMA DE SAGÚ (Cycas revoluta)</strong>
+                                La Palma de sagú (Cycas revoluta) pertenece a la familia Cycadaceae. Su distribución natural se encuentra en el Sur de Japón e Indonesia. Es una especie apreciada por ser ornamental y tener usos comestibles y medicinales.
+                            </li>
+                            <li>
+                                <strong>CYCADA (Zamia polymorpha)</strong>
+                                La Cycada (Zamia polymorpha) es una planta ancestral que pertenece a la familia Zamiaceae. Forma parte del orden de las Cícadas, que habita la Tierra desde el período Pérmico, hace unos 230 millones de años. Es nativa de México, específicamente de Chiapas, aunque el género Zamia se distribuye por Norte, Centro y Sudamérica.
+                            </li>
+                            <li>
+                                <strong>AMIGA DE CANTÍL (Zamia cremnophila)</strong>
+                                Pertenece al género Zamia, un grupo de cícadas (plantas ancestrales) con una diversidad de formas y tallos que a menudo recuerdan a las palmas. Es nativa de México (Tabasco). El epíteto "cremnophila" se refiere a su preferencia por hábitats accidentados o peñas (acantilados). Crece específicamente sobre las paredes de afloramientos calizos en zonas que aún conservan vegetación nativa, a una altitud de 50-150 metros. Es una especie rupícola (que crece en rocas) con hojas pendientes y folíolos coriáceos (parecidos al cuero) y lanceolados. Está emparentada con otras especies de cícadas del sureste de México.
+                            </li>
+                            <li>
+                                <strong>CAMOTILLO (Zamia loddigesii)</strong>
+                                Pertenece al género Zamia, un grupo de cícadas (plantas muy antiguas, parecidas a las palmas) nativas de América. Es una especie nativa de México. Es utilizada principalmente con fines ornamentales. Al igual que otras Zamias, es muy valorada en la horticultura y el ecoturismo por su aspecto exótico y su valor como "fósil viviente".
+                            </li>
+                            <li>
+                                <strong>GUANACASTE (Enterolobium cyclocarpum)</strong>
+                                Este árbol pertenece a la familia de las leguminosas, que se caracteriza por su fruto en vaina. Su área de distribución natural se extiende desde México hasta Sudamérica. Es un árbol representativo de las zonas cálidas. Es un árbol de gran tamaño, conocido por su amplia y densa copa, que proporciona excelente sombra. Es una especie importante en el ecosistema. Su principal uso es maderable. Su madera es ligera pero durable, y se utiliza en carpintería, construcción y en la fabricación de muebles y canoas.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+
+            <!-- NUEVO PUNTO L -->
+            <div class="icon-point point-l" 
+                data-area="I" 
+                data-name="Area I" 
+                data-description='
+                    <div class="area-description">
+                        <ul>
+                            <li>
+                                <strong>ANTURIO (Anthurium rionegrense)</strong>
+                                Esta es la familia de los anturios, calas y manos de león, conocida por sus inflorescencias distintivas. Es una especie nativa del Sureste de México, encontrándose en los estados de Oaxaca y Chiapas. Crece principalmente en el bioma tropical estacionalmente seco. Es una planta que puede ser terrestre (crecer en el suelo) o epífita (crecer sobre otras plantas).
+                            </li>
+                            <li>
+                                <strong>ZAPATILLA (Anthurium seleri)</strong>
+                                Pertenece a la familia Araceae, incluye a plantas conocidas por sus inflorescencias únicas, como el alcatraz o la costilla de Adán. Es una especie nativa de México (sur de Oaxaca y centro de Chiapas) y del oeste de Guatemala. Es una planta terrestre o epilítica, lo que significa que crece sobre el suelo o, más comúnmente, sobre rocas y acantilados escarpados. Prefiere los cañones sombreados y el bioma tropical húmedo, aunque también se ha adaptado a zonas abiertas casi deforestadas.
+                            </li>
+                            <li>
+                                <strong>HOJA DE CORAZÓN (Anthurium faustomirandae)</strong>
+                                Pertenece a la familia Araceae. Esta es la familia de los anturios, un extenso grupo de plantas tropicales conocidas por su distintiva inflorescencia. Es una especie endémica (exclusiva) del Sureste de México, encontrándose de forma nativa en el estado de Chiapas. Crece en elevaciones de 850 a 1,000 metros (2,100 a 3,200 pies). Es una planta terrestre que prospera principalmente sobre rocas kársticas (calizas) en bosques tropicales perennifolios.
+                            </li>
+                            <li>
+                                <strong>GRISIÑO (Cordia elaeagnoides)</strong>
+                                El Grisiño (Cordia elaeagnoides) es una especie que pertenece a la familia Boraginaceae. Tiene una amplia distribución geográfica que se extiende desde México hasta Sudamérica. Esta planta es valorada por dos usos principales: es maderable, lo que significa que su madera se aprovecha, y también se utiliza como ornato, es decir, con fines ornamentales en jardines o paisajes.
+                            </li>
+                            <li>
+                                <strong>ALMENDRO (Terminalia catappa)</strong>
+                                El Almendro (Terminalia catappa) es un árbol de la familia Combretaceae originario de Asia. Esta especie se valora por sus múltiples utilidades, siendo un árbol ornamental muy apreciado para embellecer paisajes y proporcionar sombra, además de poseer propiedades medicinales.
+                            </li>
+                            <li>
+                                <strong>PALMA KERPIS (Adonidia merrillii)</strong>
+                                Conocida popularmente como Palma de Navidad o Palma de Manila, pertenece a la familia Arecaceae y es originaria de las Filipinas. Es una especie muy apreciada en jardinería por su belleza y su tamaño compacto, que la hace ideal para sitios pequeños y para ser cultivada en macetas. Puede alcanzar alturas de hasta 6 metros en unos 8 años o hasta 20 a 25 pies (aproximadamente 6 a 7.6 metros) con un tronco delgado. Es especialmente valorada por su follaje y por sus frutos de color rojo brillante que a menudo maduran en invierno, dándole el nombre de "Palma de Navidad".
+                            </li>
+                            <li>
+                                <strong>PALMA DE SAGÚ (Cycas revoluta)</strong>
+                                La Palma de sagú (Cycas revoluta) pertenece a la familia Cycadaceae y es originaria del Sur de Japón e Indonesia. Es una especie muy valorada por sus usos como planta ornamental, pero también tiene propiedades comestibles y medicinales.
+                            </li>
+                        </ul>
+                    </div>
+                '>
+            </div>
+            
+        </div>
+    </div>
+    
+    <div class="overlay" id="overlay"></div>
+    
+    <div class="info-panel" id="infoPanel">
+        <div class="info-header">
+            <h2 class="info-title" id="infoTitle"></h2>
+            <button class="close-btn" id="closeInfo">&times;</button>
+        </div>
+        <div class="info-content" id="infoContent">
+            </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const viewport = document.getElementById('map-viewport');
+            const map = document.getElementById('map-container');
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            const iconPoints = document.querySelectorAll('.icon-point');
+            
+            // Elementos para la VENTANA MODAL
+            const infoPanel = document.getElementById('infoPanel');
+            const infoTitle = document.getElementById('infoTitle');
+            const infoContent = document.getElementById('infoContent');
+            const closeInfo = document.getElementById('closeInfo');
+            const overlay = document.getElementById('overlay');
+
+            let currentScale = 1.0;
+            let xPos = 0;
+            let yPos = 0;
+            let isDragging = false;
+            let startX, startY;
+            let hasDragged = false; 
+            const DRAG_THRESHOLD = 5; // Píxeles de tolerancia para distinguir clic de arrastre
+
+            // --- FUNCIÓN DE RENDERIZADO (Actualiza posición y zoom) ---
+            function renderMap() {
+                map.style.transform = `translate(${xPos}px, ${yPos}px) scale(${currentScale})`;
+            }
+
+            // --- CONTROL DE ZOOM ---
+            const ZOOM_STEP = 0.2;
+            const MAX_SCALE = 3.0;
+            const MIN_SCALE = 0.8; 
+
+            function updateZoom(factor) {
+                const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale + factor));
+                
+                if (newScale !== currentScale) {
+                    currentScale = newScale;
+                    
+                    // Ajustar posición para evitar el desbordamiento después del zoom
+                    const mapWidthScaled = viewport.clientWidth * currentScale;
+                    const mapHeightScaled = viewport.clientHeight * currentScale;
+                    
+                    const maxTranslateX = mapWidthScaled - viewport.clientWidth;
+                    const maxTranslateY = mapHeightScaled - viewport.clientHeight;
+
+                    xPos = Math.min(0, Math.max(-(maxTranslateX), xPos));
+                    yPos = Math.min(0, Math.max(-(maxTranslateY), yPos));
+                    
+                    renderMap();
+                }
+            }
+
+            zoomInBtn.addEventListener('click', () => updateZoom(ZOOM_STEP));
+            zoomOutBtn.addEventListener('click', () => updateZoom(-ZOOM_STEP));
+
+            // --- FUNCIÓN DE ARRASTRE (PAN) ---
+            map.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                map.classList.add('dragging');
+                startX = e.clientX;
+                startY = e.clientY;
+                hasDragged = false; // Resetear al inicio del clic
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                // Si el movimiento es significativo, marca como arrastre
+                if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+                    hasDragged = true;
+                }
+                
+                let newX = xPos + dx;
+                let newY = yPos + dy;
+
+                const viewportWidth = viewport.clientWidth;
+                const viewportHeight = viewport.clientHeight;
+                const mapWidthScaled = viewportWidth * currentScale;
+                const mapHeightScaled = viewportHeight * currentScale;
+                
+                const maxTranslateX = mapWidthScaled - viewportWidth;
+                const maxTranslateY = mapHeightScaled - viewportHeight;
+                
+                // Restringir el movimiento:
+                newX = Math.min(0, Math.max(-maxTranslateX, newX));
+                newY = Math.min(0, Math.max(-maxTranslateY, newY));
+
+                xPos = newX;
+                yPos = newY;
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                renderMap();
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                map.classList.remove('dragging');
+            });
+
+
+            // --- LÓGICA DE VENTANA MODAL ---
+
+            // Función para mostrar información del área
+            function showAreaInfo(name, description) {
+                infoTitle.textContent = name; 
+                infoContent.innerHTML = description;
+                
+                infoPanel.style.display = 'block';
+                overlay.style.display = 'block';
+            }
+
+            // Función para cerrar el panel
+            function closeInfoPanel() {
+                infoPanel.style.display = 'none';
+                overlay.style.display = 'none';
+            }
+
+            // Event listener para los puntos
+            iconPoints.forEach(icon => {
+                icon.addEventListener('click', (event) => {
+                    // Si hubo arrastre, ignora el clic y resetea la bandera
+                    if (hasDragged) {
+                        hasDragged = false;
+                        return;
+                    }
+                    
+                    event.stopPropagation(); // Evita que el clic se propague al mapa
+
+                    const name = icon.getAttribute('data-name');
+                    const description = icon.getAttribute('data-description'); 
+                    
+                    showAreaInfo(name, description); 
+                });
+            });
+
+            // Event listeners para cerrar
+            closeInfo.addEventListener('click', closeInfoPanel);
+            overlay.addEventListener('click', closeInfoPanel);
+
+            // Cierre con la tecla Escape
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closeInfoPanel();
+                }
+            });
+        });
+    </script>
+    
+<script>
+// Mobile pinch & drag support
+let scale = 1, posX = 0, posY = 0;
+const mc = document.getElementById('map-container');
+let drag = false, startX=0, startY=0, startDist=0;
+
+function apply(){ mc.style.transform=`translate(${posX}px,${posY}px) scale(${scale})`; }
+
+mc.addEventListener('mousedown',e=>{drag=true;startX=e.clientX-posX;startY=e.clientY-posY;});
+document.addEventListener('mousemove',e=>{if(!drag)return;posX=e.clientX-startX;posY=e.clientY-startY;apply();});
+document.addEventListener('mouseup',()=>drag=false);
+
+mc.addEventListener('touchstart',e=>{
+ if(e.touches.length==1){startX=e.touches[0].clientX-posX;startY=e.touches[0].clientY-posY;}
+ if(e.touches.length==2){startDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);}
+});
+mc.addEventListener('touchmove',e=>{
+ e.preventDefault();
+ if(e.touches.length==1){posX=e.touches[0].clientX-startX;posY=e.touches[0].clientY-startY;}
+ if(e.touches.length==2){
+   let d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+   scale=Math.max(0.5,Math.min(4, scale*(d/startDist))); startDist=d;
+ }
+ apply();
+},{passive:false});
+</script>
+
+</body>
+</html>
+
